@@ -321,7 +321,7 @@ void task_isr_usart (void const * arg)
 										osMutexWait(id_mtx_dev, osWaitForever);								
 										for (buf=3; buf<20; buf+=2)
 											dev->param[commd[21]-1][param_mapping[(buf-3)/2]] = ((uint16_t)commd[buf]<<8)|commd[buf+1];
-											dev->updated[commd[21]-1] = 1;
+										dev->updated[commd[21]-1] = 1;
 										osMutexRelease(id_mtx_dev);
 										/* convert the level parameters into global parameter */
 										//ctrl_param[0] = SUM (dev_param[0])

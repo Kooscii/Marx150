@@ -1,0 +1,30 @@
+# Windows:
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Python:
+*.py[cod]
+*.so
+*.egg
+*.egg-info
+dist
+build
+
+#MDK:
+*.axf
+*.bak
+*.htm
+*.crf
+*.d
+*.dep
+*.hex
+*.iex
+*.koala
+*.lnp
+*.lst
+*.o
+*.uvoptx
+*.sct
+*.uvprojx
+*.map

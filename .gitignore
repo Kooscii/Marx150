@@ -12,6 +12,14 @@ dist
 build
 
 #MDK:
+JLinkLog.txt
+JLinkSettings.ini
+RTE_Device.h
+startup_stm32f10x_md.s
+stm32f10x_conf.h
+system_stm32f10x.c
+RTE_Components.h
+*.0000
 *.axf
 *.bak
 *.htm

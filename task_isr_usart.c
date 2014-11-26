@@ -18,27 +18,27 @@ const uint8_t  response_str[3][30]	 = {{0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 																					
 /* check status and mode table */
 /* const [mode][stat] */			
-													//stat 0 1 2 3 4	mode						
+						//	stat 0 1 2 3 4	mode						
 const uint8_t CHK_AUTO[2][5] = {{1,1,0,0,0}, //0
-																{1,1,0,0,0}};//1
-													//stat 0 1 2 3 4	mode						
+								{1,1,0,0,0}};//1
+						//	stat 0 1 2 3 4	mode						
 const uint8_t CHK_MANU[2][5] = {{1,1,0,0,0}, //0
-																{1,1,0,0,0}};//1
-													//stat 0 1 2 3 4	mode						
+								{1,1,0,0,0}};//1
+						//	stat 0 1 2 3 4	mode						
 const uint8_t CHK_ON[2][5]   = {{1,1,0,0,0}, //0
-																{1,1,0,0,0}};//1
-													//stat 0 1 2 3 4	mode						
+								{1,1,0,0,0}};//1
+						//	stat 0 1 2 3 4	mode						
 const uint8_t CHK_OFF[2][5]  = {{1,1,0,0,0}, //0
-																{1,1,0,0,0}};//1
-													//stat 0 1 2 3 4	mode						
+								{1,1,0,0,0}};//1
+						//	stat 0 1 2 3 4	mode						
 const uint8_t CHK_PAU[2][5]  = {{0,1,1,1,0}, //0
-																{0,1,1,1,0}};//1
-													//stat 0 1 2 3 4	mode						
+								{0,1,1,1,0}};//1
+						//	stat 0 1 2 3 4	mode						
 const uint8_t CHK_CHG[2][5]  = {{1,1,0,0,1}, //0
-																{1,1,0,0,1}};//1
-													//stat 0 1 2 3 4	mode						
+								{1,1,0,0,1}};//1
+						//	stat 0 1 2 3 4	mode						
 const uint8_t CHK_TRG[2][5]  = {{0,1,1,1,0}, //0
-																{0,1,1,1,0}};//1
+								{0,1,1,1,0}};//1
 /*------------------------------------------------*/																					
 																					
 osMessageQDef(MsgBox_usart, 90, uint8_t); 

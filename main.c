@@ -131,9 +131,6 @@ void struct_init()
      Main Thread
  *---------------------------------------------------------------------------*/
 int main (void) {
-	//__set_FAULTMASK(1);      // ??????
-	//NVIC_SystemReset();// ??
-	//DBGMCU_CR = 1
 	osThreadId mid;
 	uint8_t enc=0, stat=0;
 	
@@ -143,7 +140,6 @@ int main (void) {
 	SPI_Config();
 	TIM_Config();
 	NVIC_Config();
-//	lcd_init();
 	struct_init();
 	
 	/* Create Mutex */

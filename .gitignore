@@ -11,6 +11,10 @@ Desktop.ini
 dist
 build
 
+#Sublime Text
+*.sublime-project
+*.sublime-workspace
+
 #MDK:
 JLinkLog.txt
 JLinkSettings.ini

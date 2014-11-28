@@ -369,7 +369,6 @@ void task_lcd_ctrl (void const * arg)
 					osMutexWait(id_mtx_dev, osWaitForever);
 					stat = dev->status[i];
 					osMutexRelease(id_mtx_dev);
-
 					lcd_select(LCD_2);
 					lcd_spi(LCD_REG, 0x82+i);
 					delay(LCD_DELAY_REG);

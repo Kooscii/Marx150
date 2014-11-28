@@ -1,29 +1,29 @@
 #include "stm32f10x.h"
 
-const char * str_DEVICE[] = {"å±‚ - 0", "å±‚ - 1", "å±‚ - 2","å±‚ - 3", "å±‚ - 4","å±‚ - 5", "å±‚ - 6","å±‚ - 7", "å±‚ - 8","å±‚ - 9"};
-const char * str_PARAM_NO[] = {"å‚æ•°1","å‚æ•°2","å‚æ•°3","å‚æ•°4","å‚æ•°5"};
-const char * str_TRG_STATUS[] = {"å‚æ•°è®¾å®š","ç­‰å¾…è§¦å‘","æš‚åœä¸­..","è§¦å‘ä¸­..","å……ç”µä¸­.."};
-const char * str_CHG_STATUS[] = {"æ‰ç”µ","å……ç”µ"};
-const char * str_CTRL_MODE[] = {"æ‰‹åŠ¨","è‡ªåŠ¨"};
-const char * str_DEV_STATUS[] = {"å…³æœº","å¼€æœº"};
+const char * str_DEVICE[] = {"²ã - 0", "²ã - 1", "²ã - 2","²ã - 3", "²ã - 4","²ã - 5", "²ã - 6","²ã - 7", "²ã - 8","²ã - 9"};
+const char * str_PARAM_NO[] = {"²ÎÊı1","²ÎÊı2","²ÎÊı3","²ÎÊı4","²ÎÊı5"};
+const char * str_TRG_STATUS[] = {"²ÎÊıÉè¶¨","µÈ´ı´¥·¢","ÔİÍ£ÖĞ..","´¥·¢ÖĞ..","³äµçÖĞ.."};
+const char * str_CHG_STATUS[] = {"µôµç","³äµç"};
+const char * str_CTRL_MODE[] = {"ÊÖ¶¯","×Ô¶¯"};
+const char * str_DEV_STATUS[] = {"¹Ø»ú","¿ª»ú"};
 const char * str_PARAM_NAME[] =	
 {/* param 1*/
-"è¾“å‡ºç”µå‹      kV",
-"å®½åº¦è®¾ç½®      us",
-"å»¶æ—¶è®¾ç½®      us",
+"Êä³öµçÑ¹      kV",
+"¿í¶ÈÉèÖÃ      us",
+"ÑÓÊ±ÉèÖÃ      us",
 /* param 2*/
-"é‡å¤é¢‘ç‡      Hz",
-"é‡å¤æ¬¡æ•°      æ¬¡",
-"è¾“å‡ºææ€§        ",
+"ÖØ¸´ÆµÂÊ      Hz",
+"ÖØ¸´´ÎÊı      ´Î",
+"Êä³ö¼«ĞÔ        ",
 /* param 3*/
-"åŠ ç”µæ­¥è¿›      kV",
-"æ­¥è¿›èŒƒå›´      kV",
-"      è‡³      kV"};
+"¼Óµç²½½ø      kV",
+"²½½ø·¶Î§      kV",
+"      ÖÁ      kV"};
 
-const char * str_SEP = "ç”µæº0 1 2 3 4 5 6 7 8 9 ";
+const char * str_SEP = "µçÔ´0 1 2 3 4 5 6 7 8 9 ";
 const char * str_BLANK = "                        ";
-const char * str_ON[] = {"  ","å¼€"};
-const char * str_CHG[] = {"  ","å……"};
-const char * str_DZ = "æ­»åŒº    ns";
+const char * str_ON[] = {"  ","¿ª"};
+const char * str_CHG[] = {"  ","³ä"};
+const char * str_DZ = "ËÀÇø    ns";
 const char * str_PR = "PWM";
-const char * str_CF = "æˆªæ­¢    us";
+const char * str_CF = "½ØÖ¹    us";

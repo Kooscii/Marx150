@@ -297,15 +297,15 @@ void task_isr_usart (void const * arg)
 										//dev_param[0,6..8] = ctrl_param[0,6..8]/DEVCNT
 										//dev_param[1..5] = ctrl_param[1..6]
 										osMutexWait(id_mtx_dev, osWaitForever);
-										for (i=0; i<10; i++)
+										for (i=0; i<DEV_CNT; i++)
 											dev->param[i][0] = ctrl_param->param[0]/DEV_CNT;
-										for (i=0; i<10; i++)
+										for (i=0; i<DEV_CNT; i++)
 											for (buf=1; buf<6; buf++)
 												dev->param[i][buf] = ctrl_param->param[buf];
-										for (i=0; i<10; i++)
+										for (i=0; i<DEV_CNT; i++)
 											for (buf=6; buf<10; buf++)
 												dev->param[i][buf] = ctrl_param->param[buf]/DEV_CNT;
-										for (i=0; i<10; i++)
+										for (i=0; i<DEV_CNT; i++)
 											dev->updated[i] = 1;
 										osMutexRelease(id_mtx_dev);
 

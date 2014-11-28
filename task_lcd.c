@@ -464,8 +464,27 @@ void task_lcd_ctrl (void const * arg)
 					}
 				}
 			}
+			if (is_upd&LU_CHO)
+			{
+				osMutexWait(id_mtx_dsp, osWaitForever);
+				sel[0]=dsp->sel_choice;
+				sel[1]=dsp->sel_dev;
+				sel[2]=dsp->sel_param;
+				osMutexRelease(id_mtx_dsp);
+
+
+				for (len =0; len<3; len++)
+				{
+					if (len == 0) lcd_select(LCD_1);
+					else lcd_select(LCD_2);
+					if (len == 1) lcd_spi(LCD_REG, 0x81);
+					else lcd_spi(LCD_REG, 0x91);
+					delay(LCD_DELAY_REG);
+					lcd_spi(LCD_DAT, len==sel[2]?0x10:' ');
+					delay(LCD_DELAY_DAT);
+				}
+			}
 			
-			//if (++flip>5) flip=0;
 		}
 		/* ----------------------------------------------------------------------------------------- *
 		 *		Testing Display

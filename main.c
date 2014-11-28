@@ -91,7 +91,7 @@ void task_idle(void const * arg)
 
 void struct_init()
 {
-		uint8_t i=0, j=0;
+	uint8_t i=0, j=0;
 	/* STRUCT TYPE_DEVICE dev */
 	id_mp_dev = osPoolCreate(osPool(MemPool_dev));
 	dev = (TYPE_DEVICE *)osPoolAlloc(id_mp_dev);
@@ -124,7 +124,7 @@ void struct_init()
 	dsp->sel_dev=0;
 	dsp->sel_param=0;
 	dsp->updated=0xff;
-	dsp->mode=0;
+	dsp->mode=3;
 }
 
 /*----------------------------------------------------------------------------
@@ -132,7 +132,8 @@ void struct_init()
  *---------------------------------------------------------------------------*/
 int main (void) {
 	osThreadId mid;
-	uint8_t enc=0, stat=0;
+	uint8_t stat=0, ispressed=0, sel=0, i=0;
+	uint16_t enc=0, param_limit[9] = {1500, 200, 9999, 100, 10000, 1, 100, 1500, 1500};
 	
 	RCC_Config();
 	GPIO_Config();
@@ -180,7 +181,7 @@ int main (void) {
 //			ctrl_param->times = dev->param[0][4];
 //		osMutexRelease(id_mtx_ctrl);
 		
-		if (GPIO_ReadInputDataBit(BTN_GP, BTN_LEFT)==RESET)
+		if (GPIO_ReadInputDataBit(BTN_GP, BTN_LEFT)==RESET || GPIO_ReadInputDataBit(BTN_GP, BTN_RIGHT)==RESET)
 		{
 //			osMutexWait(id_mtx_dsp, osWaitForever);
 //			if (dsp->sel_param--==0) dsp->sel_param = 2;
@@ -190,27 +191,25 @@ int main (void) {
 			osMutexWait(id_mtx_dsp, osWaitForever);
 			if (dsp->mode != 7)
 			{
-				if (dsp->mode--==0) dsp->mode = 5;
+				if (GPIO_ReadInputDataBit(BTN_GP, BTN_LEFT)==RESET)
+					dsp->mode = (dsp->mode+5)%6;
+				else 
+					dsp->mode = (dsp->mode+1)%6;
 				dsp->updated = 0xff;
+				stat = dsp->mode;
 			}
 			osMutexRelease(id_mtx_dsp);
-			osDelay(200);
-		}
-		else if (GPIO_ReadInputDataBit(BTN_GP, BTN_RIGHT)==RESET)
-		{
-//			osMutexWait(id_mtx_dsp, osWaitForever);
-//			if (dsp->sel_param++==2) dsp->sel_param = 0;
-//			dsp->updated |= LU_CHO | LU_PNAME | LU_PVAL;		//0x08 | 0x04 | 0x01 -- dev on|off , param value and device index should be updated
-//			osMutexRelease(id_mtx_dsp);
-//			osDelay(200);
-			osMutexWait(id_mtx_dsp, osWaitForever);
-			if (dsp->mode != 7)
+			if (stat==0 || stat==1 || stat==2)
 			{
-				if (dsp->mode++==5) dsp->mode = 0;
-				dsp->updated = 0xff;
+				TIM2->CNT = 0;
+				TIM2->ARR = param_limit[stat*3];
 			}
-			osMutexRelease(id_mtx_dsp);
-			osDelay(200);
+			else
+			{
+				TIM2->CNT = 0;
+				TIM2->ARR = 7;
+			}
+			ispressed=1;
 		}
 		else if (GPIO_ReadInputDataBit(BTN_GP, BTN_SET)==RESET)
 		{
@@ -260,24 +259,74 @@ int main (void) {
 					osMutexRelease(id_mtx_ctrl);
 				}
 			}
-			osDelay(200);
+			ispressed=1;
 		}
 		else if (GPIO_ReadInputDataBit(BTN_GP, BTN_BACK)==RESET)
 		{
 			osMutexWait(id_mtx_dsp, osWaitForever);
 			dsp->updated = 0xff;
 			osMutexRelease(id_mtx_dsp);
-			osDelay(200);
+			ispressed=1;
+		}
+		else if (GPIO_ReadInputDataBit(BTN_GP, BTN_ENCODER)==RESET)
+		{
+			osMutexWait(id_mtx_dsp, osWaitForever);
+			stat = dsp->mode;
+			if (stat==0 || stat==1 || stat==2 || stat==3)
+			{
+				dsp->sel_param = (dsp->sel_param+1)%3;
+				dsp->updated |= LU_CHO|LU_PNAME|LU_PVAL;
+			}
+			sel = dsp->sel_param;
+			osMutexRelease(id_mtx_dsp);
+			if (stat==0 || stat==1 || stat==2)
+			{
+				osMutexWait(id_mtx_ctrl, osWaitForever);
+				TIM2->ARR = param_limit[stat*3+sel];
+				TIM2->CNT = ctrl_param->param[stat*3+sel];
+				osMutexRelease(id_mtx_ctrl);
+			}
+			
+			ispressed=1;
 		}
 		
 		if (enc != TIM2->CNT)
 		{
 			osMutexWait(id_mtx_dsp, osWaitForever);
+			stat = dsp->mode;
+			sel = dsp->sel_param;
 			enc = TIM2->CNT;
-			dsp->sel_dev = enc;
+			if (stat==3 || stat==4)
+				dsp->sel_dev = (uint8_t)enc;
 			dsp->updated |= LU_DSTAT | LU_PVAL | LU_CHO;
 			osMutexRelease(id_mtx_dsp);
-		}			
-		osDelay(100);
+			osMutexWait(id_mtx_ctrl, osWaitForever);
+			if (stat==0 || stat==1 || stat==2)
+			{
+				ctrl_param->param[stat*3+sel] = enc;
+			}
+			osMutexRelease(id_mtx_ctrl);
+			osMutexWait(id_mtx_dev, osWaitForever);
+			if (stat==0 || stat==1 || stat==2)
+			{
+				if (stat*3+sel==0 || stat*3+sel==6 || stat*3+sel==7 || stat*3+sel==8)
+					for (i=0; i<DEV_CNT; i++)
+						dev->param[i][stat*3+sel] = enc/DEV_CNT;
+				else
+					for (i=0; i<DEV_CNT; i++)
+						dev->param[i][stat*3+sel] = enc;
+				for (i=0; i<DEV_CNT; i++)
+					dev->updated[i] = 1;
+			}
+			osMutexRelease(id_mtx_dev);
+		}		
+		if (ispressed)	
+		{
+			ispressed=0;
+			osDelay(300);
+		}
+		else
+			osDelay(100);
+		
 	}
 }

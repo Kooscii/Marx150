@@ -146,8 +146,17 @@ void setTRGStatus(uint8_t idx, ...)
 		case 1:
 			ctrl_param->trg = idx;
 			ctrl_param->times = 0;
-			for (i=0; i<DEV_CNT; i++)
-				setDEVStatus( i, FS_24V | FS_CHG | FS_TRG );
+			va_start(ap, idx);
+			u16t = va_arg(ap, int);
+			va_end(ap);
+			if (u16t !=0)
+			{
+				for (i=0; i<DEV_CNT; i++)
+					if ((u16t>>i)&0x01)
+						setDEVStatus( i, FS_24V | FS_CHG | FS_TRG );
+					else 
+						resetDEVStatus( i, FS_24V | FS_CHG | FS_TRG );
+			}
 			GPIO_ResetBits(SIG_GP, SIG_K_CRG);
 			GPIO_SetBits(SIG_GP, SIG_EN);
 			GPIO_SetBits(SIG_GP, SIG_K_TRG);
@@ -171,22 +180,6 @@ void setTRGStatus(uint8_t idx, ...)
 			GPIO_ResetBits(SIG_GP, SIG_EN);
 			GPIO_ResetBits(SIG_GP, SIG_K_TRG);
 			GPIO_SetBits(SIG_GP, SIG_K_CRG);
-			GPIO_SetBits(LED_GP, LED_YL);
-			break;
-		case 5:
-			ctrl_param->trg = 1;
-			ctrl_param->times = 0;
-			va_start(ap, idx);
-			u16t = va_arg(ap, int);
-			va_end(ap);
-			for (i=0; i<DEV_CNT; i++)
-				if ((u16t>>i)&0x01)
-					setDEVStatus( i, FS_24V | FS_CHG | FS_TRG );
-				else 
-					resetDEVStatus( i, FS_24V | FS_CHG | FS_TRG );
-			GPIO_ResetBits(SIG_GP, SIG_K_CRG);
-			GPIO_SetBits(SIG_GP, SIG_EN);
-			GPIO_SetBits(SIG_GP, SIG_K_TRG);
 			GPIO_SetBits(LED_GP, LED_YL);
 			break;
 		default:
@@ -363,7 +356,7 @@ void task_isr_usart (void const * arg)
 										{
 											/* |-- ctrl_param (uint16_t)commd[4,5] marks the device needed power-on , if any devices powered-on , then the ctrl_param-> will be set and allow trigger */
 											if (commd[4]!=0 || commd[5]!=0)
-												setTRGStatus(5, (int)((int)commd[4])<<8|commd[5]);
+												setTRGStatus(1, (int)((int)commd[4])<<8|commd[5]);
 											else
 												setTRGStatus(0);
 											/* |-- dev->status (uint16_t)commd[4,5] marks the device needed power-on */
@@ -375,7 +368,7 @@ void task_isr_usart (void const * arg)
 										else if (commd[3] == CMD_ON && CHK_ON[mode][stat])
 										{
 											/* |-- ctrl_param (uint16_t)commd[4,5] marks the device needed power-on , if any devices powered-on , then the ctrl_param-> will be set and allow trigger */
-											setTRGStatus ( 1 );
+											setTRGStatus (1, 0x3ff);
 										}
 										else if (commd[3] == CMD_OFF && CHK_OFF[mode][stat])
 										{
@@ -405,7 +398,7 @@ void task_isr_usart (void const * arg)
 												if (GPIO_ReadOutputDataBit(LED_GP, LED_YL) == RESET)
 													setTRGStatus(3);
 												else 
-													setTRGStatus(1);
+													setTRGStatus(1,0);
 											}
 												
 											/*  */
@@ -457,7 +450,7 @@ void task_isr_usart (void const * arg)
 											else if (GPIO_ReadOutputDataBit(LED_GP, LED_YL) == RESET)
 											{
 												osTimerStop(id_tmr_trg);
-												setTRGStatus(1);
+												setTRGStatus(1,0);
 											}
 										}
 										else

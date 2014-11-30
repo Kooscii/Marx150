@@ -220,16 +220,29 @@ int main (void) {
 		}
 		else if (GPIO_ReadInputDataBit(BTN_GP, BTN_SET)==RESET)
 		{
-			osMutexWait(id_mtx_dsp, osWaitForever);
-			stat = dsp->mode;
-			dsp->updated |= LU_DSTAT | LU_CTRG;
-			osMutexRelease(id_mtx_dsp);
-			if (stat == 3 || stat == 4)
+			if (admin == 1)
 			{
+				osMutexWait(id_mtx_dsp, osWaitForever);
+				sel = dsp->mode;
+				dsp->updated |= LU_DSTAT | LU_CTRG;
+				osMutexRelease(id_mtx_dsp);
 				osMutexWait(id_mtx_ctrl, osWaitForever);
 				stat = ctrl_param->trg;
 				osMutexRelease(id_mtx_ctrl);
-				if (stat == 0 || stat == 1)
+
+				if ((stat == 1 || stat == 2 || stat == 3) && GPIO_ReadInputDataBit(BTN_GP,BTN_BACK)==RESET)
+				{
+					if (stat == 1)
+					{
+						osTimerStart(id_tmr_trg, 1);
+					}
+					else if (GPIO_ReadOutputDataBit(LED_GP, LED_YL) == RESET)
+					{
+						osTimerStop(id_tmr_trg);
+						setTRGStatus(1,0);
+					}
+				}
+				else if ((stat == 0 || stat == 1)&&(sel == 3 || sel == 4))
 				{
 					osMutexWait(id_mtx_dev, osWaitForever);
 					if (dev->status[enc]&FS_24V)
@@ -265,15 +278,15 @@ int main (void) {
 					}
 					osMutexRelease(id_mtx_ctrl);
 				}
+				ispressed=1;
 			}
-			ispressed=1;
 		}
 		else if (GPIO_ReadInputDataBit(BTN_GP, BTN_BACK)==RESET)
 		{
-			osMutexWait(id_mtx_dsp, osWaitForever);
-			dsp->updated = 0xff;
-			osMutexRelease(id_mtx_dsp);
-			ispressed=1;
+			// osMutexWait(id_mtx_dsp, osWaitForever);
+			// dsp->updated = 0xff;
+			// osMutexRelease(id_mtx_dsp);
+			// ispressed=1;
 		}
 		else if (GPIO_ReadInputDataBit(BTN_GP, BTN_ENCODER)==RESET)
 		{

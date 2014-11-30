@@ -12,7 +12,7 @@ extern osMutexId id_mtx_ctrl;
 extern osTimerId id_tmr_trg;
 extern osTimerId id_tmr_wup;
 
-extern void setTRGStatus(uint8_t idx);
+extern void setTRGStatus(uint8_t idx,...);
 extern void dspUpdate(uint8_t upd);
 
 uint16_t freq=0, times=0, cnt=0, trigger_cnt=0;
@@ -59,7 +59,7 @@ void timer_trigger  (void const *arg)
 			{
 				TRIGGER();
 				osDelay(500);
-				setTRGStatus(1);
+				setTRGStatus(1,0);
 			}
 			else 
 			{
@@ -94,7 +94,7 @@ void timer_trigger  (void const *arg)
 				else
 				{
 					period = 0;
-					setTRGStatus(1);
+					setTRGStatus(1,0);
 				}
 			}
 		}

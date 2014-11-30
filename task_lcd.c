@@ -463,7 +463,7 @@ void task_lcd_ctrl (void const * arg)
 					}
 				}
 			}
-			if (is_upd&LU_CHO)
+			if (is_upd&LU_CHO && ctrl_param->admin == 1)
 			{
 				osMutexWait(id_mtx_dsp, osWaitForever);
 				sel[0]=dsp->sel_choice;

@@ -113,7 +113,7 @@ typedef struct
 
 typedef struct
 {
-	uint8_t trg, mode;
+	uint8_t trg, mode, admin;
 	uint16_t freq, times, param[10];
 } TYPE_CTRL;
 

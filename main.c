@@ -90,7 +90,7 @@ void task_idle(void const * arg)
 	for(;;);
 }
 
-void struct_init()
+void struct_init(uint8_t* admin)
 {
 	uint8_t i=0, j=0;
 	/* STRUCT TYPE_DEVICE dev */
@@ -117,6 +117,11 @@ void struct_init()
 	ctrl_param->times=0;
 	for (i=0;i<10;i++)
 		ctrl_param->param[i]=0;
+	if (GPIO_ReadInputDataBit(BTN_GP, BTN_BACK) == RESET)
+		ctrl_param->admin = 1;
+	else
+		ctrl_param->admin = 0;
+	*admin = ctrl_param->admin;
 	
 	/* STRUCT TYPE_DISP dsp */
 	id_mp_dsp = osPoolCreate(osPool(MemPool_dsp));
@@ -125,7 +130,7 @@ void struct_init()
 	dsp->sel_dev=0;
 	dsp->sel_param=0;
 	dsp->updated=0xff;
-	dsp->mode=3;
+	dsp->mode=*admin?3:0;
 }
 
 /*----------------------------------------------------------------------------
@@ -133,7 +138,7 @@ void struct_init()
  *---------------------------------------------------------------------------*/
 int main (void) {
 	osThreadId mid;
-	uint8_t stat=0, ispressed=0, sel=0, i=0;
+	uint8_t stat=0, ispressed=0, sel=0, i=0, admin=0, lcd_cnt[2] = {3,6};
 	uint16_t enc=0, param_limit[9] = {1500, 200, 9999, 100, 10000, 1, 100, 1500, 1500};
 	
 	RCC_Config();
@@ -142,7 +147,7 @@ int main (void) {
 	SPI_Config();
 	TIM_Config();
 	NVIC_Config();
-	struct_init();
+	struct_init(&admin);
 	
 	/* Create Mutex */
 	id_mtx_dsp = osMutexCreate(osMutex(Mutex_dsp));
@@ -193,9 +198,10 @@ int main (void) {
 			if (dsp->mode != 7)
 			{
 				if (GPIO_ReadInputDataBit(BTN_GP, BTN_LEFT)==RESET)
-					dsp->mode = (dsp->mode+5)%6;
+					dsp->mode = (dsp->mode+lcd_cnt[admin]-1)%lcd_cnt[admin];
 				else 
-					dsp->mode = (dsp->mode+1)%6;
+					dsp->mode = (dsp->mode+1)%lcd_cnt[admin];
+				dsp->sel_param = 0;
 				dsp->updated = 0xff;
 				stat = dsp->mode;
 			}
@@ -271,55 +277,59 @@ int main (void) {
 		}
 		else if (GPIO_ReadInputDataBit(BTN_GP, BTN_ENCODER)==RESET)
 		{
-			osMutexWait(id_mtx_dsp, osWaitForever);
-			stat = dsp->mode;
-			if (stat==0 || stat==1 || stat==2 || stat==3)
+			if (admin == 1)
 			{
-				dsp->sel_param = (dsp->sel_param+1)%3;
-				dsp->updated |= LU_CHO|LU_PNAME|LU_PVAL;
-			}
-			sel = dsp->sel_param;
-			osMutexRelease(id_mtx_dsp);
-			if (stat==0 || stat==1 || stat==2)
-			{
-				osMutexWait(id_mtx_ctrl, osWaitForever);
-				TIM2->ARR = param_limit[stat*3+sel];
-				TIM2->CNT = ctrl_param->param[stat*3+sel];
-				osMutexRelease(id_mtx_ctrl);
-			}
-			
+				osMutexWait(id_mtx_dsp, osWaitForever);
+				stat = dsp->mode;
+				if (stat==0 || stat==1 || stat==2 || stat==3)
+				{
+					dsp->sel_param = (dsp->sel_param+1)%3;
+					dsp->updated |= LU_CHO|LU_PNAME|LU_PVAL;
+				}
+				sel = dsp->sel_param;
+				osMutexRelease(id_mtx_dsp);
+				if (stat==0 || stat==1 || stat==2)
+				{
+					osMutexWait(id_mtx_ctrl, osWaitForever);
+					TIM2->ARR = param_limit[stat*3+sel];
+					TIM2->CNT = ctrl_param->param[stat*3+sel];
+					osMutexRelease(id_mtx_ctrl);
+				}
 			ispressed=1;
+			}
 		}
-		
 		if (enc != TIM2->CNT)
 		{
-			osMutexWait(id_mtx_dsp, osWaitForever);
-			stat = dsp->mode;
-			sel = dsp->sel_param;
-			enc = TIM2->CNT;
-			if (stat==3 || stat==4)
-				dsp->sel_dev = (uint8_t)enc;
-			dsp->updated |= LU_DSTAT | LU_PVAL | LU_CHO;
-			osMutexRelease(id_mtx_dsp);
-			osMutexWait(id_mtx_ctrl, osWaitForever);
-			if (stat==0 || stat==1 || stat==2)
+			if (admin == 1)
 			{
-				ctrl_param->param[stat*3+sel] = enc;
-			}
-			osMutexRelease(id_mtx_ctrl);
-			osMutexWait(id_mtx_dev, osWaitForever);
-			if (stat==0 || stat==1 || stat==2)
-			{
-				if (stat*3+sel==0 || stat*3+sel==6 || stat*3+sel==7 || stat*3+sel==8)
+				osMutexWait(id_mtx_dsp, osWaitForever);
+				stat = dsp->mode;
+				sel = dsp->sel_param;
+				enc = TIM2->CNT;
+				if (stat==3 || stat==4)
+					dsp->sel_dev = (uint8_t)enc;
+				dsp->updated |= LU_DSTAT | LU_PVAL | LU_CHO;
+				osMutexRelease(id_mtx_dsp);
+				osMutexWait(id_mtx_ctrl, osWaitForever);
+				if (stat==0 || stat==1 || stat==2)
+				{
+					ctrl_param->param[stat*3+sel] = enc;
+				}
+				osMutexRelease(id_mtx_ctrl);
+				osMutexWait(id_mtx_dev, osWaitForever);
+				if (stat==0 || stat==1 || stat==2)
+				{
+					if (stat*3+sel==0 || stat*3+sel==6 || stat*3+sel==7 || stat*3+sel==8)
+						for (i=0; i<DEV_CNT; i++)
+							dev->param[i][stat*3+sel] = enc/DEV_CNT;
+					else
+						for (i=0; i<DEV_CNT; i++)
+							dev->param[i][stat*3+sel] = enc;
 					for (i=0; i<DEV_CNT; i++)
-						dev->param[i][stat*3+sel] = enc/DEV_CNT;
-				else
-					for (i=0; i<DEV_CNT; i++)
-						dev->param[i][stat*3+sel] = enc;
-				for (i=0; i<DEV_CNT; i++)
-					dev->updated[i] = 1;
+						dev->updated[i] = 1;
+				}
+				osMutexRelease(id_mtx_dev);
 			}
-			osMutexRelease(id_mtx_dev);
 		}		
 		if (ispressed)	
 		{

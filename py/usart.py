@@ -5,7 +5,6 @@ import serial
 from wx._misc import Usleep
 from serial.tools.list_ports_windows import NULL
 
-
 def crc32(lst, lens):
     i = 0
     dwpoly = 0x04c11db7
@@ -59,7 +58,7 @@ class MainWindow(wx.Frame):
         #Parameter Label and Text
         self.Global.txtParam = []
         for i in range(0,9):
-            self.Global.txtParam.append(wx.TextCtrl(self,value=str(global_param[i]/param_ratio[i]), size=(70,22),style=wx.TE_RIGHT))
+            self.Global.txtParam.append(wx.TextCtrl(self,value=str(global_param[global_addr[0]][i]/param_ratio[i]), size=(70,22),style=wx.TE_RIGHT))
             self.Global.szr[i].Add(wx.StaticText(self,label=self.strParam[i],style=wx.TE_CENTER), 1, wx.LEFT|wx.RIGHT, 5)
             self.Global.szr[i].Add(self.Global.txtParam[i], 1, wx.LEFT|wx.RIGHT, 5)
             self.Global.szr[i].Add(wx.StaticText(self,label=self.strUnits[i],style=wx.TE_LEFT), 0, wx.RIGHT, 15)
@@ -71,16 +70,32 @@ class MainWindow(wx.Frame):
         self.Global.btnSend = wx.Button(self,label=u"参数设定",size=(110,35))
         self.Global.szr[9].Add(self.Global.btnSend, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, 5)
 
+        #bind event
+        #textctrl event
         for i in range(0,9):
             self.Global.txtParam[i].Bind(wx.EVT_LEFT_DOWN , lambda evt, idx=i: self.TextOnMouse(evt,idx))
             self.Global.txtParam[i].Bind(wx.EVT_MOUSEWHEEL, lambda evt, idx=i: self.TextOnMouse(evt,idx))
             self.Global.txtParam[i].Bind(wx.EVT_RIGHT_DOWN, lambda evt, idx=i: self.TextOnMouse(evt,idx))
             self.Global.txtParam[i].Bind(wx.EVT_KEY_DOWN  , lambda evt, idx=i: self.TextOnKey(evt,idx))
             self.Global.txtParam[i].Bind(wx.EVT_KILL_FOCUS, lambda evt, idx=i: self.TextOnLeft(evt,idx))
-        
+        #send button event
         self.Global.btnSend.Bind(wx.EVT_BUTTON, self.OnGlobalSend)
+        self.Global.chnAddr.Bind(wx.EVT_CHOICE, self.OnChoiceAddr)
         
- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         self.SetSizer(self.szrMain)
         self.SetAutoLayout(1)
         self.szrMain.Fit(self)
@@ -89,6 +104,31 @@ class MainWindow(wx.Frame):
         self.tmrCheckModf = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimerCheckModf, self.tmrCheckModf)
         self.tmrCheckModf.Start(5000)
+
+    def printStatus(self, p, BuffData):
+        tout=0
+        while (p.inWaiting()<30):
+            tout+=1
+            if (tout>50000):
+                break;
+        if (tout>50000):
+            rpbyte = 3
+        else:
+            recv = p.read(p.inWaiting())
+            rpbyte = ord(recv[3])
+#         for x in BuffData:
+#             print hex(x),
+#         print 
+#         for x in recv:
+#             print hex(ord(x)),
+        print "Target:%s, Command:0x%02x, Data:0x%02x    Response:%s"%(BuffData[1]==0x00 and "All " or "No."+str(BuffData[1]-1), BuffData[2], BuffData[21], response_str[rpbyte])
+        
+
+    def checkModf(self, idx, val):
+        if val != global_param[global_addr[0]][idx]:
+            self.Global.btnSend.SetLabel(u"参数设定(缓存)")
+        # else:
+        #     self.Global.btnSend.SetLabel(u"参数设定")
 
     def TextOnMouse(self,evt,idx):
         #auto select all and enable the wheel to adjust the value , when right pressed , the adjust rate will multiply by 10
@@ -106,6 +146,7 @@ class MainWindow(wx.Frame):
     def TextOnKey(self,evt,idx):
         #limit the allowed key press
         kc = evt.GetKeyCode()
+        # print kc
         if kc==13:
             if evt.ShiftDown():
                 idx = (idx+8)%9
@@ -113,7 +154,13 @@ class MainWindow(wx.Frame):
                 idx = (idx+1)%9
             self.Global.txtParam[idx].SetFocus()  
             self.Global.txtParam[idx].SelectAll()
-        elif (kc>=48 and kc<=57) or kc==46 or kc==314 or kc==316:
+        elif (kc>=48 and kc<=57) or kc==314 or kc==316 or kc == 8:
+            evt.Skip()
+        elif kc==46:
+            txt = self.Global.txtParam[idx].GetValue()
+            for i in txt:
+                if i == '.':
+                    return
             evt.Skip()
         elif kc==317:
             self.Global.txtParam[idx].SetInsertionPointEnd()
@@ -123,30 +170,55 @@ class MainWindow(wx.Frame):
     def TextOnLeft(self,evt,idx):
         #check the display format of each parameter
         if len(self.Global.txtParam[idx].GetValue()) == 0:
-            self.Global.txtParam[idx].SetValue(str(global_param[idx]/param_ratio[idx]))
+            self.Global.txtParam[idx].SetValue(str(global_param[global_addr[0]][idx]/param_ratio[idx]))
         else:
             val = int(float(self.Global.txtParam[idx].GetValue())*param_ratio[idx])
-            if val != global_param[idx]:
-                global_param[idx] = val
-                self.Global.btnSend.SetLabel(u"参数设定(缓存)")
             self.Global.txtParam[idx].SetValue(str(val/param_ratio[idx]))
+            self.checkModf(idx, val)
         evt.Skip()
 
     def OnTimerCheckModf(self,evt):
         for i in range(0,9):
             val = int(float(self.Global.txtParam[i].GetValue())*param_ratio[i])
-            if val != global_param[i]:
-                global_param[i] = val
-                self.Global.btnSend.SetLabel(u"参数设定(缓存)")
+            self.checkModf(i, val)
 
     def OnGlobalSend(self,evt):
+        #initialize the command
+        BuffData = [0x3A,global_addr[0]+1,0x20]
+        for i in range(0, 25):
+            BuffData.append(0)
+        BuffData.extend([0x0D,0x0A])
+
+        #checkout the value of global parameters from global textctrl
         for i in range(0,9):
-            if (i)%3 == 0: print
-            print self.strParam[i].encode('utf-8')+":"+str(global_param[i]/param_ratio[i])+" ",
+            val = int(float(self.Global.txtParam[i].GetValue())*param_ratio[i])
+            global_param[global_addr[0]][i] = val
+            # if (i)%3 == 0: print
+            # print self.strParam[i].encode('utf-8')+":"+str(val/param_ratio[i])+" ",
+
+        #sending command via usart
+        usart_ctrl = serial.Serial(0,115200)
+        for i in range(0,9):
+            BuffData[i*2+3] = global_param[global_addr[0]][param_mapping[i]]/0x100
+            BuffData[i*2+4] = global_param[global_addr[0]][param_mapping[i]]%0x100
+        crc32calc = crc32(BuffData,23)
+        for i in range(27,23,-1):
+            BuffData[i] = int(crc32calc%0x100)
+            crc32calc /= 0x100
+        usart_ctrl.write(BuffData)
+        self.printStatus(usart_ctrl, BuffData)
+        usart_ctrl.close()
+
         self.Global.btnSend.SetLabel(u"参数设定")
-            # self.szrStage[i].Add(wx.Button(self))#, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, 10)
-            # self.szrStage[i].Add(wx.Button(self))
-            # self.Global[i].Add(wx.Button(self))#, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, 10)
+
+    def OnChoiceAddr(self,evt):
+        global_addr[0] = int(self.Global.chnAddr.GetString(self.Global.chnAddr.GetSelection())[2])
+        print u"Selected Power Source " + str(global_addr[0])
+        for i in range(0,9):
+            self.Global.txtParam[i].SetValue(str(global_param[global_addr[0]][i]/param_ratio[i]))
+
+
+
 
 #         #define on-off button
 #         #set sizer -- sizerBtnDev
@@ -289,8 +361,8 @@ class MainWindow(wx.Frame):
 #         print "Target:%s, Command:0x%02x, Data:0x%02x    Response:%s"%(BuffData[1]==0x00 and "All " or "No."+str(BuffData[1]-1), BuffData[2], BuffData[21], response_str[rpbyte])
         
 #     def OnChoice_chnCOM(self, evt):
-#         s_port[0] = int(self.chnCOM.GetString(self.chnCOM.GetSelection())[3])-1
-#         print "Serial Port select to COM" + str(s_port[0]+1)
+#         s_port[0][0] = int(self.chnCOM.GetString(self.chnCOM.GetSelection())[3])-1
+#         print "Serial Port select to COM" + str(s_port[0][0]+1)
         
 #     def OnButton_btnCOM(self, evt):
 #         com_list = []
@@ -306,8 +378,8 @@ class MainWindow(wx.Frame):
 #             print "No Serial Avaliable"
 #         else:
 #             self.chnCOM.SetSelection(0)
-#             s_port[0] = int(self.chnCOM.GetString(self.chnCOM.GetSelection())[3])-1
-#             print "Serial Port select to COM" + str(s_port[0]+1)
+#             s_port[0][0] = int(self.chnCOM.GetString(self.chnCOM.GetSelection())[3])-1
+#             print "Serial Port select to COM" + str(s_port[0][0]+1)
         
 #     def OnButton_btnTS(self, evt, idx, txtC):
 #         BuffData = [0x3A,0x01]
@@ -325,7 +397,7 @@ class MainWindow(wx.Frame):
 #         BuffData[4] = (value>>8)&0xff
 #         BuffData[5] = value&0xff
         
-#         usart_ctrl = serial.Serial(s_port[0],115200)
+#         usart_ctrl = serial.Serial(s_port[0][0],115200)
 #         crc32calc = crc32(BuffData,23)
 #         for j in range(27,23,-1):
 #             BuffData[j] = int(crc32calc%0x100)
@@ -342,13 +414,13 @@ class MainWindow(wx.Frame):
         
 #         if idx==0:
 #             if self.btnDev[0].GetLabel() == u"全部开机":
-#                 dev_status[0] = 0x3ff
+#                 dev_status[0][0] = 0x3ff
 #                 self.btnDev[idx].SetLabel(u"全部关机")
 #             else:
-#                 dev_status[0] = 0x000
+#                 dev_status[0][0] = 0x000
 #                 self.btnDev[idx].SetLabel(u"全部开机")
 #             for i in range(2,12):
-#                 if dev_status[0]&(0x01<<(i-2)):
+#                 if dev_status[0][0]&(0x01<<(i-2)):
 #                     self.btnDev[i].SetLabel(u"电源"+str(i-2)+u"开")
 #                 else:
 #                     self.btnDev[i].SetLabel(u"电源"+str(i-2)+u"关")
@@ -362,18 +434,18 @@ class MainWindow(wx.Frame):
 #                     self.txtAll[j].SetValue(str(tmp_val/dev_param_ratio[j]))
 #                     self.txtParam[j][i].SetValue(str(dev_param[i][j]/dev_param_ratio[j]))
 #         else:
-#             dev_status[0] ^= (0x01<<(idx-2))
+#             dev_status[0][0] ^= (0x01<<(idx-2))
 #             btn = evt.GetEventObject()
-#             if (dev_status[0]&(0x01<<(idx-2))):
+#             if (dev_status[0][0]&(0x01<<(idx-2))):
 #                 btn.SetLabel(u"电源"+str(idx-2)+u"开")
 #             else:
 #                 btn.SetLabel(u"电源"+str(idx-2)+u"关")
 #         if (idx != 1):
-#             usart_ctrl = serial.Serial(s_port[0],115200)
+#             usart_ctrl = serial.Serial(s_port[0][0],115200)
 #             BuffData[2] = 0x21
 #             BuffData[3] = 0xc0
-#             BuffData[4] = (dev_status[0]>>8)&0xff
-#             BuffData[5] = dev_status[0]&0xff
+#             BuffData[4] = (dev_status[0][0]>>8)&0xff
+#             BuffData[5] = dev_status[0][0]&0xff
 #             crc32calc = crc32(BuffData,23)
 #             for j in range(27,23,-1):
 #                 BuffData[j] = int(crc32calc%0x100)
@@ -388,7 +460,7 @@ class MainWindow(wx.Frame):
 #             BuffData.append(0)
 #         BuffData.extend([0x0D,0x0A])
          
-#         usart_ctrl = serial.Serial(s_port[0],115200)
+#         usart_ctrl = serial.Serial(s_port[0][0],115200)
 #         BuffData[2] = 0x21
 #         BuffData[3] = idx
 #         BuffData[4] = idx==0x13 and 0x03 or 0x00
@@ -415,7 +487,7 @@ class MainWindow(wx.Frame):
 #             dev_param[0][i] = int(float(self.txtOther[i-3].GetValue())*dev_param_ratio[i])
 #             self.txtOther[i-3].SetValue(str(dev_param[0][i]/dev_param_ratio[i]))
 
-#         usart_ctrl = serial.Serial(s_port[0],115200)
+#         usart_ctrl = serial.Serial(s_port[0][0],115200)
 #         for i in range(0,10):
 #             BuffData[21] = i+1
 #             for j in range(0,9):
@@ -429,22 +501,24 @@ class MainWindow(wx.Frame):
 #             self.printStatus(usart_ctrl, BuffData)
 #         usart_ctrl.close()
 
-response_str = [u"OK",u"Err",u"Operation Denied",u"Timeout"]
-s_port            = [0]
-dev_status        = [0]
-dev_param_mapping = [0,7,8,6,4,3,1,2,5]
-param_ratio       = [10.0,10.0,10.0,100.0,1,1,10.0,10.0,10.0]
-global_param      = [0,0,0,0,0,0,0,0,0]
-stage_param       = []
+global_addr   = [0]
+s_port        = [0]
+dev_status    = [0]
+response_str  = [u"OK",u"Err",u"Operation Denied",u"Timeout"]
+param_mapping = [0,7,8,6,4,3,1,2,5]
+param_ratio   = [10.0,10.0,10.0,100.0,1,1,10.0,10.0,10.0]
+global_param  = []
+stage_param   = []
 for i in range(0,10):
     stage_param.append([0,0,0,0,0,0,0,0,0])
-
+    global_param.append([0,0,0,0,0,0,0,0,0])
 # createTable(crc32table)
 #print "%x" %(crc32(dev_param_default,1))
 
 app = wx.App(False)
-frame = MainWindow(None, "Usart")
+frame = MainWindow(None, "Marx")
 frame.Global.chnAddr.SetFocus()
+frame.OnChoiceAddr(NULL)
 # frame.OnButton_btnCOM(NULL)
 # if len(frame.chnCOM.GetItems()) != 0:
 #     frame.OnButton_btnSend(NULL)

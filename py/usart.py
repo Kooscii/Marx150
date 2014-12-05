@@ -27,61 +27,111 @@ def crc32(lst, lens):
 class MainWindow(wx.Frame):
     def __init__(self, parent, title):
         self.dirname  =''
-        self.strParam = [u"输出电压",u"脉冲宽度",u"触发延时",u"重复频率",u"重复次数",u"输出极性",u"步进电压",u"电压上限",u"电压下限"]
+        self.strParam = [u"输出电压",u"脉冲宽度",u"触发延时",u"重复频率",u"重复次数",u"输出极性",u"电压步进",u"电压上限",u"电压下限"]
         self.strUnits = [u"kV",u"us",u"us",u"Hz",u"次",u"  ",u"kV",u"kV",u"kV"]
+        self.strCtrl = [u"手动控制",u"自动控制",u"电源上电",u"电源断电",u"暂停",u"电源充电",u"触发"]
         self.strAddr  = []
+        self.txtp=[]
         for i in range(0,10):
             self.strAddr.append(u"电源"+str(i))
-        wx.Frame.__init__(self, parent, title=title, size=(200,-1))
+        wx.Frame.__init__(self, parent, title=title, size=(-1,-1), pos=(50,50))
           
 
         #creating the main sizer and the global/Stage settings staticbox in it
-        self.szrMain          = wx.BoxSizer(wx.VERTICAL)
-        self.szrSettings      = wx.BoxSizer(wx.HORIZONTAL)
-        self.Global           = wx.StaticBox(self, label=u"整体参数设置")
-        self.Global.szrMain   = wx.StaticBoxSizer(self.Global, wx.VERTICAL)
-        self.Stage         = wx.StaticBox(self, label=u"分立参数设置")
-        self.Stage.szrMain = wx.StaticBoxSizer(self.Stage, wx.VERTICAL)
+        self.szrMain        = wx.BoxSizer(wx.VERTICAL)
+        self.szrSettings    = wx.BoxSizer(wx.HORIZONTAL)
+        self.szrControls    = wx.BoxSizer(wx.HORIZONTAL)
+        self.Global         = wx.StaticBox(self, label=u"整体参数设置")
+        self.Global.szrMain = wx.StaticBoxSizer(self.Global, wx.VERTICAL)
+        self.Stage          = wx.StaticBox(self, label=u"分立参数设置")
+        self.Stage.szrMain  = wx.StaticBoxSizer(self.Stage, wx.VERTICAL)
+        self.Ctrl           = wx.StaticBox(self, label=u"控制指令")
+        self.Ctrl.szrMain   = wx.StaticBoxSizer(self.Ctrl, wx.HORIZONTAL)
         #construct the frame
-        self.szrMain.Add(self.szrSettings, 1, wx.TOP|wx.BOTTOM, 10)
-        self.szrSettings.Add(self.Global.szrMain, 1, wx.LEFT|wx.RIGHT, 10)
-        self.szrSettings.Add(self.Stage.szrMain, 1, wx.LEFT|wx.RIGHT, 10)
+        #main sizer
+        self.szrMain.Add(self.szrSettings, 4, wx.TOP|wx.BOTTOM|wx.EXPAND, 10)
+        self.szrMain.Add(self.szrControls, 1, wx.TOP|wx.BOTTOM|wx.EXPAND, 10)
+        #setting sizer
+        self.szrSettings.Add(self.Global.szrMain, 4, wx.LEFT|wx.RIGHT|wx.EXPAND, 10)
+        self.szrSettings.Add(self.Stage.szrMain, 11, wx.LEFT|wx.RIGHT|wx.EXPAND, 10)
         self.Global.szr = []
         self.Stage.szr  = []
         for i in range(0,10):
             self.Global.szr.append(wx.BoxSizer(wx.HORIZONTAL))
-            self.Global.szrMain.Add(self.Global.szr[i], 0, wx.TOP|wx.BOTTOM, 5)
+            self.Global.szrMain.Add(self.Global.szr[i], i==9 and 2 or 1, wx.TOP|wx.BOTTOM|wx.EXPAND, 5)
             self.Stage.szr.append(wx.BoxSizer(wx.HORIZONTAL))
-            self.Stage.szrMain.Add(self.Stage.szr[i], 0, wx.TOP|wx.BOTTOM, 5)
-
+            self.Stage.szrMain.Add(self.Stage.szr[i], i==9 and 2 or 1, wx.TOP|wx.BOTTOM|wx.EXPAND, 5)
         #create the elements for each parameters
         #Parameter Label and Text
         self.Global.txtParam = []
+        txtTemp = []
         for i in range(0,9):
-            self.Global.txtParam.append(wx.TextCtrl(self,value=str(global_param[global_addr[0]][i]/param_ratio[i]), size=(70,22),style=wx.TE_RIGHT))
-            self.Global.szr[i].Add(wx.StaticText(self,label=self.strParam[i],style=wx.TE_CENTER), 1, wx.LEFT|wx.RIGHT, 5)
-            self.Global.szr[i].Add(self.Global.txtParam[i], 1, wx.LEFT|wx.RIGHT, 5)
-            self.Global.szr[i].Add(wx.StaticText(self,label=self.strUnits[i],style=wx.TE_LEFT), 0, wx.RIGHT, 15)
+            txtTemp.append(wx.TextCtrl(self,value=str(global_param[global_addr[0]][i]/param_ratio[i]), size=(70,25),style=wx.TE_RIGHT))
+            self.Global.szr[i].Add(wx.StaticText(self,label=self.strParam[i],style=wx.TE_CENTER), 2, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
+            self.Global.szr[i].Add(txtTemp[i], 2, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, 5)
+            self.Global.szr[i].Add(wx.StaticText(self,label=self.strUnits[i],style=wx.TE_LEFT), 1, wx.RIGHT|wx.ALIGN_CENTER, 15)
         #Address Choice Box
         self.Global.chnAddr = wx.Choice(self, size=(-1,25),choices=self.strAddr)
         self.Global.chnAddr.SetSelection(0)
-        self.Global.szr[9].Add(self.Global.chnAddr, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, 5)
+        self.Global.szr[9].Add(self.Global.chnAddr, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, 5)
         #Parameter setting Send Button
         self.Global.btnSend = wx.Button(self,label=u"参数设定",size=(110,35))
-        self.Global.szr[9].Add(self.Global.btnSend, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, 5)
-
+        self.Global.szr[9].Add(self.Global.btnSend, 2, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER|wx.SHAPED, 15)
         #bind event
         #textctrl event
         for i in range(0,9):
-            self.Global.txtParam[i].Bind(wx.EVT_LEFT_DOWN , lambda evt, idx=i: self.TextOnMouse(evt,idx))
-            self.Global.txtParam[i].Bind(wx.EVT_MOUSEWHEEL, lambda evt, idx=i: self.TextOnMouse(evt,idx))
-            self.Global.txtParam[i].Bind(wx.EVT_RIGHT_DOWN, lambda evt, idx=i: self.TextOnMouse(evt,idx))
-            self.Global.txtParam[i].Bind(wx.EVT_KEY_DOWN  , lambda evt, idx=i: self.TextOnKey(evt,idx))
-            self.Global.txtParam[i].Bind(wx.EVT_KILL_FOCUS, lambda evt, idx=i: self.TextOnLeft(evt,idx))
+            txtTemp[i].Bind(wx.EVT_LEFT_DOWN , lambda evt, dic="Global", idxi=i, idxj=0: self.TextOnMouse(evt,dic,idxi,idxj))
+            txtTemp[i].Bind(wx.EVT_MOUSEWHEEL, lambda evt, dic="Global", idxi=i, idxj=0: self.TextOnMouse(evt,dic,idxi,idxj))
+            txtTemp[i].Bind(wx.EVT_RIGHT_DOWN, lambda evt, dic="Global", idxi=i, idxj=0: self.TextOnMouse(evt,dic,idxi,idxj))
+            txtTemp[i].Bind(wx.EVT_KEY_DOWN  , lambda evt, dic="Global", idxi=i, idxj=0: self.TextOnKey(evt,dic,idxi,idxj))
+            txtTemp[i].Bind(wx.EVT_KILL_FOCUS, lambda evt, dic="Global", idxi=i, idxj=0: self.TextOnLeft(evt,dic,idxi,idxj))
+        for j in range(0,1):
+            self.Global.txtParam.append(txtTemp)
         #send button event
         self.Global.btnSend.Bind(wx.EVT_BUTTON, self.OnGlobalSend)
         self.Global.chnAddr.Bind(wx.EVT_CHOICE, self.OnChoiceAddr)
-        
+        #stage parameters
+        self.Stage.txtParam = []
+        self.Stage.ckbUnify = []
+        #unify input
+        for i in range(0,9):
+                self.Stage.ckbUnify.append(wx.CheckBox(self, label=self.strParam[i][2:4]))
+                self.Stage.ckbUnify[i].SetValue(1)                
+                self.Stage.szr[i].Add(self.Stage.ckbUnify[i], 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER|wx.SHAPED, 5)
+        #stage param txt
+        for j in range(0,10):
+            txtTemp = []
+            for i in range(0,9):
+                txtTemp.append(wx.TextCtrl(self,value=str(stage_param[j][i]/param_ratio[i]), size=(30,25),style=wx.TE_RIGHT))
+                self.Stage.szr[i].Add(txtTemp[i], 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, 5)
+            self.Stage.txtParam.append(txtTemp)
+
+        self.Stage.btnSend = wx.Button(self,label=u"设定",size=(30,35))
+        self.Stage.szr[i+1].Add(self.Stage.btnSend, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER|wx.SHAPED, 5)
+        self.Stage.ckbStatus = []
+        for j in range(0,10):
+            self.Stage.ckbStatus.append(wx.CheckBox(self,label=u"层"+str(j),size=(30,25)))        
+            self.Stage.szr[i+1].Add(self.Stage.ckbStatus[j], 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_HORIZONTAL, 5)
+        #bind events
+        for j in range(0,10):
+            for i in range(0,9):
+                self.Stage.txtParam[j][i].Bind(wx.EVT_LEFT_DOWN , lambda evt, dic="Stage", idxi=i, idxj=j: self.TextOnMouse(evt,dic,idxi,idxj))
+                self.Stage.txtParam[j][i].Bind(wx.EVT_MOUSEWHEEL, lambda evt, dic="Stage", idxi=i, idxj=j: self.TextOnMouse(evt,dic,idxi,idxj))
+                self.Stage.txtParam[j][i].Bind(wx.EVT_RIGHT_DOWN, lambda evt, dic="Stage", idxi=i, idxj=j: self.TextOnMouse(evt,dic,idxi,idxj))
+                self.Stage.txtParam[j][i].Bind(wx.EVT_KEY_DOWN  , lambda evt, dic="Stage", idxi=i, idxj=j: self.TextOnKey(evt,dic,idxi,idxj))
+                self.Stage.txtParam[j][i].Bind(wx.EVT_KILL_FOCUS, lambda evt, dic="Stage", idxi=i, idxj=j: self.TextOnLeft(evt,dic,idxi,idxj))
+            self.Stage.ckbStatus[j].Bind(wx.EVT_CHECKBOX, lambda evt, idx=j: self.StageOnSw(evt,idx))
+
+        #controls sizer
+        self.szrControls.Add(self.Ctrl.szrMain, 1, wx.LEFT|wx.RIGHT|wx.EXPAND, 10)
+        self.Ctrl.btnCtrl = []
+        for i in range(0,7):
+            self.Ctrl.btnCtrl.append(wx.Button(self,label=self.strCtrl[i],size=(70,30)))
+            self.Ctrl.szrMain.Add(self.Ctrl.btnCtrl[i], 1, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.ALIGN_CENTER_VERTICAL|wx.SHAPED, 7)
+        #bind events
+        for i in range(0,7):
+            self.Ctrl.btnCtrl[i].Bind(wx.EVT_BUTTON, lambda evt, idx=i+0x11: self.BtnCtrlOnButton(evt,idx))
+        self.Stage.btnSend.Bind(wx.EVT_BUTTON, self.OnStageSend)
 
 
 
@@ -91,10 +141,7 @@ class MainWindow(wx.Frame):
 
 
 
-
-
-
-
+        self.txtp = {"Global":self.Global.txtParam, "Stage":self.Stage.txtParam}
 
         self.SetSizer(self.szrMain)
         self.SetAutoLayout(1)
@@ -103,7 +150,30 @@ class MainWindow(wx.Frame):
 
         self.tmrCheckModf = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimerCheckModf, self.tmrCheckModf)
-        self.tmrCheckModf.Start(5000)
+        self.tmrCheckModf.Start(1000,1)
+    
+    def BtnCtrlOnButton(self,evt,idx):
+        #initialize the command
+        BuffData = [0x3A,global_addr[0]+1,0x21]
+        for i in range(0, 25):
+            BuffData.append(0)
+        BuffData.extend([0x0D,0x0A])
+        #format the command
+        BuffData[3] = idx
+        u16t = 1<<global_addr[0]
+        BuffData[4] = (u16t>>8)&0xff
+        BuffData[5] = u16t&0xff
+        crc32calc = crc32(BuffData,23)
+        for i in range(27,23,-1):
+            BuffData[i] = int(crc32calc%0x100)
+            crc32calc /= 0x100
+        try:
+            usart_ctrl = serial.Serial(s_port[0],115200)
+            usart_ctrl.write(BuffData)
+            self.printStatus(usart_ctrl, BuffData)
+            usart_ctrl.close()
+        except:
+            print "Can't open COM"+str(s_port[0]+1)
 
     def printStatus(self, p, BuffData):
         tout=0
@@ -116,71 +186,88 @@ class MainWindow(wx.Frame):
         else:
             recv = p.read(p.inWaiting())
             rpbyte = ord(recv[3])
-#         for x in BuffData:
-#             print hex(x),
-#         print 
-#         for x in recv:
-#             print hex(ord(x)),
-        print "Target:%s, Command:0x%02x, Data:0x%02x    Response:%s"%(BuffData[1]==0x00 and "All " or "No."+str(BuffData[1]-1), BuffData[2], BuffData[21], response_str[rpbyte])
-        
+        # for x in BuffData:
+        #     print hex(x),
+        # print 
+        # for x in recv:
+        #     print hex(ord(x)),
+        print "Addr:%s, MainCmd:0x%02x, SubCmd:0x%02x    Response:%s"%(BuffData[1]==0x00 and "All " or "No."+str(BuffData[1]-1), BuffData[2], BuffData[3], response_str[rpbyte])
 
-    def checkModf(self, idx, val):
-        if val != global_param[global_addr[0]][idx]:
+    def TextFormat(self, dic, idxi, idxj):
+        try:
+            val = int(float(self.txtp[dic][idxj][idxi].GetValue())*param_ratio[idxi])
+        except:
+            val = 0
+        self.txtp[dic][idxj][idxi].SetValue(str(val/param_ratio[idxi]))
+
+    def TextCheckModf(self, dic, idxi, idxj):
+        try:
+            val = int(float(self.txtp[dic][idxj][idxi].GetValue())*param_ratio[idxi])
+        except:
+            val = 0
+        if val != param[dic][dic=="Global" and global_addr[0] or idxj][idxi]:
             self.Global.btnSend.SetLabel(u"参数设定(缓存)")
+            self.Stage.btnSend.SetLabel(u"设定(缓存)")
+
         # else:
         #     self.Global.btnSend.SetLabel(u"参数设定")
 
-    def TextOnMouse(self,evt,idx):
+    def TextOnMouse(self,evt,dic,idxi, idxj):
+        self.tmrCheckModf.Stop()
         #auto select all and enable the wheel to adjust the value , when right pressed , the adjust rate will multiply by 10
-        self.Global.txtParam[idx].SetFocus()  
-        self.Global.txtParam[idx].SelectAll()
-        try:
-            w = evt.GetWheelRotation()
-            m = evt.RightIsDown() and 12 or 120
-            val = int(float(self.Global.txtParam[idx].GetValue())*param_ratio[idx])+w/m
-            if val>=0:
-                self.Global.txtParam[idx].SetValue(str(val/param_ratio[idx]))
-        except:
-            pass
+        self.txtp[dic][idxj][idxi].SetFocus()  
+        self.txtp[dic][idxj][idxi].SelectAll()
+        # try:
+        w = evt.GetWheelRotation()
+        m = evt.RightIsDown() and int(w/120)*10 or w/120
+        v = evt.MiddleIsDown() and m*10 or m
+        val = int(float(self.txtp[dic][idxj][idxi].GetValue())*param_ratio[idxi])+v
+        if val>=0:
+            self.txtp[dic][idxj][idxi].SetValue(str(val/param_ratio[idxi]))
+        else:
+            self.txtp[dic][idxj][idxi].SetValue(str(0/param_ratio[idxi]))
+        self.tmrCheckModf.Start(3000,1)
 
-    def TextOnKey(self,evt,idx):
+    def TextOnKey(self,evt,dic,idxi, idxj):
+        self.tmrCheckModf.Stop()
         #limit the allowed key press
         kc = evt.GetKeyCode()
         # print kc
-        if kc==13:
+        if kc==13 or kc==9:
             if evt.ShiftDown():
-                idx = (idx+8)%9
+                (idxi,idxj) = (kc==9 and dic=="Stage") and (idxi,(idxj+9)%10) or ((idxi+8)%9,idxj) 
             else:
-                idx = (idx+1)%9
-            self.Global.txtParam[idx].SetFocus()  
-            self.Global.txtParam[idx].SelectAll()
+                (idxi,idxj) = (kc==9 and dic=="Stage") and (idxi,(idxj+1)%10) or ((idxi+1)%9,idxj) 
+            self.txtp[dic][idxj][idxi].SetFocus()  
+            self.txtp[dic][idxj][idxi].SelectAll()
         elif (kc>=48 and kc<=57) or kc==314 or kc==316 or kc == 8:
             evt.Skip()
         elif kc==46:
-            txt = self.Global.txtParam[idx].GetValue()
-            for i in txt:
+            val = self.txtp[dic][idxj][idxi].GetValue()
+            for i in val:
                 if i == '.':
                     return
             evt.Skip()
         elif kc==317:
-            self.Global.txtParam[idx].SetInsertionPointEnd()
+            self.txtp[dic][idxj][idxi].SetInsertionPointEnd()
         elif kc==315:
-            self.Global.txtParam[idx].SetInsertionPoint(0)
-
-    def TextOnLeft(self,evt,idx):
-        #check the display format of each parameter
-        if len(self.Global.txtParam[idx].GetValue()) == 0:
-            self.Global.txtParam[idx].SetValue(str(global_param[global_addr[0]][idx]/param_ratio[idx]))
+            self.txtp[dic][idxj][idxi].SetInsertionPoint(0)
         else:
-            val = int(float(self.Global.txtParam[idx].GetValue())*param_ratio[idx])
-            self.Global.txtParam[idx].SetValue(str(val/param_ratio[idx]))
-            self.checkModf(idx, val)
+            return
+        self.tmrCheckModf.Start(3000,1)
+
+    def TextOnLeft(self,evt,dic,idxi, idxj):
+        #check the display format of each parameter
+        self.TextFormat(dic, idxi, idxj)
+        self.TextCheckModf(dic, idxi, idxj)
         evt.Skip()
 
     def OnTimerCheckModf(self,evt):
         for i in range(0,9):
-            val = int(float(self.Global.txtParam[i].GetValue())*param_ratio[i])
-            self.checkModf(i, val)
+            self.TextCheckModf("Global", i, 0)
+        for j in range(0,10):
+            for i in range(0,9):
+                self.TextCheckModf("Stage", i, j) 
 
     def OnGlobalSend(self,evt):
         #initialize the command
@@ -191,13 +278,18 @@ class MainWindow(wx.Frame):
 
         #checkout the value of global parameters from global textctrl
         for i in range(0,9):
-            val = int(float(self.Global.txtParam[i].GetValue())*param_ratio[i])
+            val = int(float(self.Global.txtParam[0][i].GetValue())*param_ratio[i])
             global_param[global_addr[0]][i] = val
-            # if (i)%3 == 0: print
-            # print self.strParam[i].encode('utf-8')+":"+str(val/param_ratio[i])+" ",
+        for j in range(0,10):
+            for i in range(0,9):
+                if i==0 or i==6 or i==7 or i==8:
+                    stage_param[j][i] = global_param[global_addr[0]][i]/8
+                    self.Stage.txtParam[j][i].SetValue(str(stage_param[j][i]/param_ratio[i]))
+                else:
+                    stage_param[j][i] = global_param[global_addr[0]][i]
+                    self.Stage.txtParam[j][i].SetValue(str(stage_param[j][i]/param_ratio[i]))
 
-        #sending command via usart
-        usart_ctrl = serial.Serial(0,115200)
+        #format the command
         for i in range(0,9):
             BuffData[i*2+3] = global_param[global_addr[0]][param_mapping[i]]/0x100
             BuffData[i*2+4] = global_param[global_addr[0]][param_mapping[i]]%0x100
@@ -205,17 +297,98 @@ class MainWindow(wx.Frame):
         for i in range(27,23,-1):
             BuffData[i] = int(crc32calc%0x100)
             crc32calc /= 0x100
-        usart_ctrl.write(BuffData)
-        self.printStatus(usart_ctrl, BuffData)
-        usart_ctrl.close()
+
+        #sending command via usart
+        try:
+            usart_ctrl = serial.Serial(s_port[0],115200)
+            usart_ctrl.write(BuffData)
+            self.printStatus(usart_ctrl, BuffData)
+            usart_ctrl.close()
+        except:
+            print "Can't open COM"+str(s_port[0]+1)
 
         self.Global.btnSend.SetLabel(u"参数设定")
+        self.Stage.btnSend.SetLabel(u"设定")
 
     def OnChoiceAddr(self,evt):
         global_addr[0] = int(self.Global.chnAddr.GetString(self.Global.chnAddr.GetSelection())[2])
         print u"Selected Power Source " + str(global_addr[0])
         for i in range(0,9):
-            self.Global.txtParam[i].SetValue(str(global_param[global_addr[0]][i]/param_ratio[i]))
+            self.Global.txtParam[0][i].SetValue(str(global_param[global_addr[0]][i]/param_ratio[i]))
+
+    def OnStageSend(self,evt):
+        #initialize the command
+        BuffData = [0x3A,global_addr[0]+1,0x22]
+        for i in range(0, 25):
+            BuffData.append(0)
+        BuffData.extend([0x0D,0x0A])
+
+        #checkout the value of global parameters from global textctrl
+        for j in range(0,10):
+            for i in range(0,9):
+                val = int(float(self.Stage.txtParam[j][i].GetValue())*param_ratio[i])
+                stage_param[j][i] = val
+        for i in range(0,9):
+            if i==0 or i==6 or i==7 or i==8:
+                global_param[0][i] = sum([stage_param[j][i] for j in range(0,8)])
+                self.Global.txtParam[0][i].SetValue(str(global_param[0][i]/param_ratio[i]))
+            else:
+                global_param[0][i] = stage_param[0][i]
+                self.Global.txtParam[0][i].SetValue(str(global_param[0][i]/param_ratio[i]))
+
+        for j in range(0,10):
+            #format the command
+            for i in range(0,9):
+                BuffData[i*2+3] = stage_param[j][param_mapping[i]]/0x100
+                BuffData[i*2+4] = stage_param[j][param_mapping[i]]%0x100
+            BuffData[21] = j+1
+            crc32calc = crc32(BuffData,23)
+            for i in range(27,23,-1):
+                BuffData[i] = int(crc32calc%0x100)
+                crc32calc /= 0x100
+
+            #sending command via usart
+            try:
+                usart_ctrl = serial.Serial(s_port[0],115200)
+                usart_ctrl.write(BuffData)
+                self.printStatus(usart_ctrl, BuffData)
+                usart_ctrl.close()
+            except:
+                print "Can't open COM"+str(s_port[0]+1)
+                # pass
+            # for i in BuffData:
+            #     print hex(i),
+            # print
+
+        self.Global.btnSend.SetLabel(u"参数设定")
+        self.Stage.btnSend.SetLabel(u"设定")
+
+    def StageOnSw(self,evt,idx):
+        stage_status[idx] = self.Stage.ckbStatus[idx].GetValue()
+
+        BuffData = [0x3A,global_addr[0]+1,0x21]
+        for i in range(0, 25):
+            BuffData.append(0)
+        BuffData.extend([0x0D,0x0A])
+        #format the command
+        BuffData[3] = 0xc0
+        u16t=0
+        for i in range(0,10):
+            if stage_status[i]:
+                u16t |= 1<<i
+        BuffData[4] = (u16t>>8)&0xff
+        BuffData[5] = u16t&0xff
+        crc32calc = crc32(BuffData,23)
+        for i in range(27,23,-1):
+            BuffData[i] = int(crc32calc%0x100)
+            crc32calc /= 0x100
+        try:
+            usart_ctrl = serial.Serial(s_port[0],115200)
+            usart_ctrl.write(BuffData)
+            self.printStatus(usart_ctrl, BuffData)
+            usart_ctrl.close()
+        except:
+            print "Can't open COM"+str(s_port[0]+1)
 
 
 
@@ -297,7 +470,7 @@ class MainWindow(wx.Frame):
 #         #define elements
 #         self.txtDZ = wx.TextCtrl(self, value=u"500", size=(60,20), style=wx.TE_RIGHT)
 #         self.btnDZ = wx.Button(self, label=u"死区设置/ns")
-#         self.txtCF = wx.TextCtrl(self, value=u"20", size=(60,20), style=wx.TE_RIGHT)
+#         self.txtpF = wx.TextCtrl(self, value=u"20", size=(60,20), style=wx.TE_RIGHT)
 #         self.btnCF = wx.Button(self, label=u"截止宽度/us")
 #         self.txtPR = wx.TextCtrl(self, value=u"64", size=(60,20), style=wx.TE_RIGHT)
 #         self.btnPR = wx.Button(self, label=u"PWM比率/16666")
@@ -306,7 +479,7 @@ class MainWindow(wx.Frame):
 #         #bind events
 #         self.Bind(wx.EVT_BUTTON, lambda evt, idx=0xA0, txtC=self.txtDZ : self.OnButton_btnTS(evt, idx, txtC), self.btnDZ)
 #         self.Bind(wx.EVT_BUTTON, lambda evt, idx=0xA1, txtC=self.txtPR : self.OnButton_btnTS(evt, idx, txtC), self.btnPR)
-#         self.Bind(wx.EVT_BUTTON, lambda evt, idx=0xA2, txtC=self.txtCF : self.OnButton_btnTS(evt, idx, txtC), self.btnCF)
+#         self.Bind(wx.EVT_BUTTON, lambda evt, idx=0xA2, txtC=self.txtpF : self.OnButton_btnTS(evt, idx, txtC), self.btnCF)
 #         self.Bind(wx.EVT_BUTTON, self.OnButton_btnCOM, self.btnCOM)
 #         self.Bind(wx.EVT_CHOICE, self.OnChoice_chnCOM, self.chnCOM)
 #         #set sizer
@@ -315,7 +488,7 @@ class MainWindow(wx.Frame):
 #         self.sizerTS = wx.StaticBoxSizer(sbTS, wx.HORIZONTAL)  
 #         self.sizerTS.Add(self.chnCOM, 0, wx.RIGHT|wx.LEFT|wx.CENTER, 5)
 #         self.sizerTS.Add(self.btnCOM, 0, wx.RIGHT|wx.LEFT|wx.CENTER, 5)
-#         self.sizerTS.Add(self.txtCF, 0, wx.RIGHT|wx.LEFT|wx.CENTER, 5)
+#         self.sizerTS.Add(self.txtpF, 0, wx.RIGHT|wx.LEFT|wx.CENTER, 5)
 #         self.sizerTS.Add(self.btnCF, 0, wx.RIGHT|wx.LEFT|wx.CENTER, 5)
 #         self.sizerTS.Add(self.txtDZ, 0, wx.RIGHT|wx.LEFT|wx.CENTER, 5)
 #         self.sizerTS.Add(self.btnDZ, 0, wx.RIGHT|wx.LEFT|wx.CENTER, 5)
@@ -503,15 +676,17 @@ class MainWindow(wx.Frame):
 
 global_addr   = [0]
 s_port        = [0]
-dev_status    = [0]
 response_str  = [u"OK",u"Err",u"Operation Denied",u"Timeout"]
 param_mapping = [0,7,8,6,4,3,1,2,5]
 param_ratio   = [10.0,10.0,10.0,100.0,1,1,10.0,10.0,10.0]
 global_param  = []
 stage_param   = []
+stage_status  = []
 for i in range(0,10):
     stage_param.append([0,0,0,0,0,0,0,0,0])
+    stage_status.append(0)
     global_param.append([0,0,0,0,0,0,0,0,0])
+param = {"Global":global_param, "Stage":stage_param}
 # createTable(crc32table)
 #print "%x" %(crc32(dev_param_default,1))
 

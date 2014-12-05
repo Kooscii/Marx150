@@ -39,6 +39,9 @@ const uint8_t CHK_CHG[2][5]  = {{1,1,0,0,1}, //0
 						//	stat 0 1 2 3 4	mode						
 const uint8_t CHK_TRG[2][5]  = {{0,1,1,1,0}, //0
 								{0,1,1,1,0}};//1
+						//	stat 0 1 2 3 4	mode
+const uint8_t CHK_PAR[2][5]  = {{1,1,0,0,0}, //0
+								{1,1,0,0,0}};//1
 /*------------------------------------------------*/																					
 																					
 osMessageQDef(MsgBox_usart, 90, uint8_t); 
@@ -180,6 +183,8 @@ void setTRGStatus(uint8_t idx, ...)
 			GPIO_ResetBits(SIG_GP, SIG_EN);
 			GPIO_ResetBits(SIG_GP, SIG_K_TRG);
 			GPIO_SetBits(SIG_GP, SIG_K_CRG);
+			for (i=0; i<DEV_CNT; i++)
+				resetDEVStatus( i, FS_24V | FS_CHG | FS_TRG );
 			GPIO_SetBits(LED_GP, LED_YL);
 			break;
 		default:
@@ -275,7 +280,7 @@ void task_isr_usart (void const * arg)
 									mode = ctrl_param->mode;
 									osMutexRelease(id_mtx_ctrl);
 									
-									if (commd[2] == CMD_PAR)
+									if (commd[2] == CMD_PAR && CHK_PAR[mode][stat])
 									{
 										/* setting the global parameters */
 										osMutexWait(id_mtx_ctrl, osWaitForever);
@@ -308,7 +313,7 @@ void task_isr_usart (void const * arg)
 									/* --------------------------------------------------------
 											setting parameters 
 									---------------------------------------------------------*/
-									else if (commd[2] == CMD_LPAR)
+									else if (commd[2] == CMD_LPAR && CHK_PAR[mode][stat])
 									{
 										/* setting each level parameters , commd[21] is the device index */
 										osMutexWait(id_mtx_dev, osWaitForever);								
@@ -368,7 +373,8 @@ void task_isr_usart (void const * arg)
 										else if (commd[3] == CMD_ON && CHK_ON[mode][stat])
 										{
 											/* |-- ctrl_param (uint16_t)commd[4,5] marks the device needed power-on , if any devices powered-on , then the ctrl_param-> will be set and allow trigger */
-											setTRGStatus (1, 0x3ff);
+											if (commd[5]&0x01)
+												setTRGStatus (1, 0x3ff);
 										}
 										else if (commd[3] == CMD_OFF && CHK_OFF[mode][stat])
 										{
